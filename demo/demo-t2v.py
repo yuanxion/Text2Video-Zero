@@ -77,6 +77,30 @@ def demo_t2v_with_edge():
     )
 
 
+# Edge, DreamBooth
+def demo_t2v_with_edge_dreambooth():
+    print(f'\n######', sys._getframe().f_code.co_name)
+    model = Model(device="cuda", dtype=torch.float16)
+    params = {"low_threshold": 100, "high_threshold": 200}
+    # more options for low GPU memory usage
+    params.update({"chunk_size": 4})  # 8
+    params.update({"merging_ratio": 0})  # 0
+    params.update({"resolution": 400})  # 512
+
+    prompt = 'avatar style'
+    video_path = 'woman1'
+    dreambooth_model_path = 'Avatar DB'
+    out_path = f'./text2video_edge_db_{prompt}.gif'
+
+    model.process_controlnet_canny_db(
+        dreambooth_model_path,
+        video_path,
+        prompt=prompt,
+        save_path=out_path,
+        **params,
+    )
+
+
 # Depth
 def demo_t2v_with_depth():
     print(f'\n######', sys._getframe().f_code.co_name)
@@ -100,4 +124,5 @@ def demo_t2v_with_depth():
 # demo_t2v()
 # demo_t2v_with_pose()
 # demo_t2v_with_edge()
-demo_t2v_with_depth()
+demo_t2v_with_edge_dreambooth()
+# demo_t2v_with_depth()
