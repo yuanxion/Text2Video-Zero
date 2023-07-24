@@ -77,6 +77,27 @@ def demo_t2v_with_edge():
     )
 
 
+# Depth
+def demo_t2v_with_depth():
+    print(f'\n######', sys._getframe().f_code.co_name)
+    model = Model(device="cuda", dtype=torch.float16)
+    params = {}
+    # more options for low GPU memory usage
+    params.update({"chunk_size": 8})  # 8
+    params.update({"merging_ratio": 0})  # 0
+    # 320: bad quality
+    params.update({"resolution": 320})  # 512
+
+    prompt = 'oil painting of a deer, a high-quality, detailed, and professional photo'
+    # video_path = '__assets__/depth_videos/deer.mp4'
+    video_path = '__assets__/depth_videos/fox.mp4'
+    out_path = f'./text2video_depth_control_{prompt}.mp4'
+    model.process_controlnet_depth(
+        video_path, prompt=prompt, save_path=out_path, **params
+    )
+
+
 # demo_t2v()
 # demo_t2v_with_pose()
-demo_t2v_with_edge()
+# demo_t2v_with_edge()
+demo_t2v_with_depth()
