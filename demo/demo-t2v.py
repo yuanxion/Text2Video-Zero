@@ -2,25 +2,59 @@ import os
 import sys
 import torch
 from pathlib import Path
-sys.path.append(str(Path(__file__).absolute().parent.parent))
-os.environ['CURL_CA_BUNDLE'] = ''
 
+sys.path.append(str(Path(__file__).absolute().parent.parent))
+# os.environ['CURL_CA_BUNDLE'] = ''
 from model import Model
 
-model = Model(device = "cuda", dtype = torch.float16)
-#model = Model(device = "cpu", dtype = torch.float32)
-print(f'--> model {model}')
 
-prompt = "A horse galloping on a street"
-params = {"t0": 44, "t1": 47 , "motion_field_strength_x" : 12, "motion_field_strength_y" : 12, "video_length": 8}
-# more options
-params.update({"chunk_size" : 1})
-params.update({"merging_ratio" : 1})
-print(f'params: {params}')
+def prepare_model_list():
+    from hf_utils import get_model_list
 
-#out_path, fps = f"./text2video_{prompt.replace(' ','_')}.mp4", 4
-#model.process_text2video(prompt, fps = fps, path = out_path, **params)
+    model_list = get_model_list()
+    for idx, name in enumerate(model_list):
+        print(idx, name)
+    idx = int(
+        input("Select the model by the listed number: ")
+    )  # select the model of your choice
 
-motion_path = '__assets__/poses_skeleton_gifs/dance1_corr.mp4'
-out_path = f"./text2video_pose_guidance_{prompt.replace(' ','_')}.gif"
-model.process_controlnet_pose(motion_path, prompt=prompt, save_path=out_path)
+
+def demo_t2v():
+    print(f'\n######', sys._getframe().f_code.co_name)
+    model = Model(device="cuda", dtype=torch.float16)
+
+    prompt = "A horse galloping on a raining street"
+    params = {
+        "t0": 44,
+        "t1": 47,
+        "motion_field_strength_x": 12,
+        "motion_field_strength_y": 12,
+        "video_length": 8,
+    }
+    # more options for low GPU memory usage
+    params.update({"chunk_size": 2})  # 8
+    params.update({"merging_ratio": 1})  # 0
+
+    out_path, fps = f"./text2video_{prompt.replace(' ','_')}.mp4", 4
+    model.process_text2video(prompt, fps=fps, path=out_path, **params)
+
+
+# Pose
+def demo_t2v_with_pose():
+    print(f'\n######', sys._getframe().f_code.co_name)
+    model = Model(device="cuda", dtype=torch.float16)
+    params = {}
+    # more options for low GPU memory usage
+    params.update({"resolution": 320})  # 512
+
+    prompt = 'an astronaut dancing in outer space'
+    motion_path = '__assets__/poses_skeleton_gifs/dance1_corr.mp4'
+    # out_path = f"./text2video_pose_guidance_{prompt.replace(' ','_')}.gif"
+    out_path = f"./text2video_pose_guidance_{prompt.replace(' ','_')}.mp4"
+    model.process_controlnet_pose(
+        motion_path, prompt=prompt, save_path=out_path, **params
+    )
+
+
+# demo_t2v()
+demo_t2v_with_pose()
