@@ -121,8 +121,28 @@ def demo_t2v_with_depth():
     )
 
 
+# Video Instruct-Pix2Pix
+def demo_t2v_instruct_pix2pix():
+    print(f'\n######', sys._getframe().f_code.co_name)
+    model = Model(device="cuda", dtype=torch.float16)
+    params = {}
+    # more options for low GPU memory usage
+    params.update({"chunk_size": 4})  # 8
+    params.update({"merging_ratio": 0})  # 0
+    # 320: bad quality
+    params.update({"resolution": 360})  # 512
+
+    prompt = 'make it Van Gogh Starry Night'
+    video_path = '__assets__/pix2pix video/camel.mp4'
+    out_path = f'./video_instruct_pix2pix_{prompt}.mp4'
+    model.process_pix2pix(
+        video_path, prompt=prompt, save_path=out_path, **params
+    )
+
+
 # demo_t2v()
 # demo_t2v_with_pose()
 # demo_t2v_with_edge()
-demo_t2v_with_edge_dreambooth()
+# demo_t2v_with_edge_dreambooth()
 # demo_t2v_with_depth()
+demo_t2v_instruct_pix2pix()
