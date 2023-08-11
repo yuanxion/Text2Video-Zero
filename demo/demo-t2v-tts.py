@@ -6,6 +6,18 @@ import torch
 from pathlib import Path
 
 
+def run_command(command):
+    print(f'[*] run_command {command=} ')
+
+    try:
+        result = subprocess.run(command, shell=False, timeout=10)
+        print(f'demo_tts subprocess {result=}')
+    except subprocess.CalledProcessError as e:
+        print('Command: {command}')
+        print('Exception return code: {e.returncode}')
+        print('Exception output: {e.output}')
+
+
 def read_and_splite(story_file, txt_folder: Path):
     print(f'[+] read_and_splite')
 
@@ -78,6 +90,8 @@ def demo_t2v(prompt: str, mp4_folder: Path):
     out_path, fps = mp4_file, 4
     model.process_text2video(prompt, fps=fps, path=out_path, **params)
 
+    return mp4_file
+
 
 def demo_tts(prompt: str, mp3_folder: Path):
     print(f'[-] demo_tts {prompt=}')
@@ -94,20 +108,38 @@ def demo_tts(prompt: str, mp3_folder: Path):
     command += ['--write-media', mp3_file]
     command += ['--write-subtitles', tts_file]
 
-    try:
-        result = subprocess.run(command, timeout=10)
-        print(f'demo_tts subprocess {result=}')
-    except subprocess.CalledProcessError as e:
-        print('Command: {command}')
-        print('Exception return code: {e.returncode}')
-        print('Exception output: {e.output}')
+    run_command(command)
+    return mp3_file
+
+
+def merge_video_audio(mp3_file: Path, mp4_file: Path, output_file: Path):
+    print(f'[-] merge_video_audio')
+
+    # command = ['ffmpeg -i videos/Spring_has_come.mp4 -i voices/Spring_has_come.mp3 -c:v copy -c:a mp3 merged.mp4']
+
+    command = ['ffmpeg']
+    command += ['-i', mp4_file]
+    command += ['-i', mp3_file]
+    command += ['-c:v', 'copy']
+    command += ['-c:a', 'mp3']
+    command += [output_file]
+
+    run_command(command)
 
 
 def demo_t2v_tts(sentence, mp3_folder: Path, mp4_folder: Path):
     print(f'[+] demo_t2v_tts {sentence=}')
+    output_file = f'merged.mp4'
 
-    demo_tts(sentence, mp3_folder)
-    demo_t2v(sentence, mp4_folder)
+    # mp3_file = demo_tts(sentence, mp3_folder)
+    # mp4_file = demo_t2v(sentence, mp4_folder)
+    # merge_video_audio(mp3_file, mp4_file, output_file)
+
+    merge_video_audio(
+        './voices/Spring_has_come.mp3',
+        './videos/Spring_has_come.mp4',
+        output_file,
+    )
 
 
 txt_folder = './texts'
