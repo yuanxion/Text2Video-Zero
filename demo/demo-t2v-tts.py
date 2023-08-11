@@ -107,35 +107,53 @@ def demo_tts(prompt: str, mp3_folder: Path):
     command += ['--text', prompt]
     command += ['--write-media', mp3_file]
     command += ['--write-subtitles', tts_file]
-
     run_command(command)
+
     return mp3_file
 
 
-def merge_video_audio(mp3_file: Path, mp4_file: Path, output_file: Path):
+def merge_video_audio(
+    prompt: str, mp3_file: Path, mp4_file: Path, output_file: Path
+):
     print(f'[-] merge_video_audio')
 
+    merged_file = 'merged.mp4'
     # command = ['ffmpeg -i videos/Spring_has_come.mp4 -i voices/Spring_has_come.mp3 -c:v copy -c:a mp3 merged.mp4']
 
+    # merge video and audio
     command = ['ffmpeg']
     command += ['-i', mp4_file]
     command += ['-i', mp3_file]
     command += ['-c:v', 'copy']
     command += ['-c:a', 'mp3']
-    command += [output_file]
-
+    command += [merged_file]
     run_command(command)
+
+    # add subtitles
+    command = ['ffmpeg']
+    command += ['-i', merged_file]
+    command += [
+        '-vf',
+        f'drawtext=text={prompt} :x=150:y=400:fontsize=24:fontcolor=white',
+    ]
+    command += [output_file]
+    run_command(command)
+
+
+def merge_story_videos():
+    print(f'[+] merge_story_videos')
 
 
 def demo_t2v_tts(sentence, mp3_folder: Path, mp4_folder: Path):
     print(f'[+] demo_t2v_tts {sentence=}')
-    output_file = f'merged.mp4'
+    output_file = f'final.mp4'
 
     # mp3_file = demo_tts(sentence, mp3_folder)
     # mp4_file = demo_t2v(sentence, mp4_folder)
-    # merge_video_audio(mp3_file, mp4_file, output_file)
+    # merge_video_audio(sentence, mp3_file, mp4_file, output_file)
 
     merge_video_audio(
+        sentence,
         './voices/Spring_has_come.mp3',
         './videos/Spring_has_come.mp4',
         output_file,
@@ -154,5 +172,8 @@ for sentence in sentences:
 
     # for testing
     sys.exit(0)
+
+# merge all small videos (with voice and subtitles)
+merge_story_videos()
 
 # python demo/demo-t2v-tts.py
