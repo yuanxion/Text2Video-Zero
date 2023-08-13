@@ -158,7 +158,7 @@ def merge_video_audio(
     command += ['-i', merged_file]
     command += [
         '-vf',
-        f'drawtext=text={prompt} :x=150:y=400:fontsize=24:fontcolor=white',
+        f'drawtext=text={prompt} :x=50:y=400:fontsize=24:fontcolor=white',
     ]
     command += [f'{mp4_folder}/{output_file}']
     run_command(command)
