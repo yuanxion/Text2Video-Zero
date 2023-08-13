@@ -5,12 +5,34 @@ import sys
 import torch
 from pathlib import Path
 
+sys.path.append(str(Path(__file__).absolute().parent.parent))
+from model import Model
+
+txt_folder = './texts'
+mp3_folder = './voices'
+mp4_folder = './videos'
+
+
+def convert_string(prompt: str) -> str:
+    return prompt.replace(' ', '_')
+
+
+def clear_folders(folders) -> None:
+    for folder in folders:
+        if not os.path.exists(folder):
+            print(f'{folder=} is not existed, continue...')
+            continue
+        for filename in os.listdir(folder):
+            file_path = os.path.join(folder, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+
 
 def run_command(command):
     print(f'[*] run_command {command=} ')
 
     try:
-        result = subprocess.run(command, shell=False, timeout=10)
+        result = subprocess.run(command, shell=False, timeout=6000)
         print(f'demo_tts subprocess {result=}')
     except subprocess.CalledProcessError as e:
         print('Command: {command}')
@@ -23,6 +45,9 @@ def read_and_splite(story_file, txt_folder: Path):
 
     with open(story_file, 'r') as f:
         lines = f.readlines()
+        if lines is None:
+            print(f'Read story file failed, exit...')
+            sys.exit(0)
 
     sentences = []
     for i, line in enumerate(lines):
@@ -40,9 +65,6 @@ def read_and_splite(story_file, txt_folder: Path):
         lex.whitespace_split = True
         lex.quotes = '"'
         res = list(lex)
-        # # sq = shlex.quote(line)
-        # # res = shlex.split(sq, comments='.', posix=True)
-        # print(f'res {i}: {res=}')
 
         for sentence in res:
             # skip blank sentence
@@ -62,13 +84,10 @@ def read_and_splite(story_file, txt_folder: Path):
 def demo_t2v(prompt: str, mp4_folder: Path):
     print(f'[-] demo_t2v {prompt=}')
 
-    mp4_file = f'{mp4_folder}/{prompt.replace(" ", "_")}.mp4'
+    mp4_file = f'{mp4_folder}/{convert_string(prompt)}.mp4'
     curr_dir = os.getcwd()
     voice_dir = os.path.join(curr_dir, mp4_folder)
     os.makedirs(voice_dir, exist_ok=True)
-
-    sys.path.append(str(Path(__file__).absolute().parent.parent))
-    from model import Model
 
     print(f'\n######', sys._getframe().f_code.co_name)
 
@@ -84,7 +103,8 @@ def demo_t2v(prompt: str, mp4_folder: Path):
         # "video_length": 80,
     }
     # more options for low GPU memory usage
-    params.update({"chunk_size": 2})  # 8
+    # params.update({"chunk_size": 2})  # 8
+    params.update({"chunk_size": 4})  # 8
     params.update({"merging_ratio": 1})  # 0
 
     out_path, fps = mp4_file, 4
@@ -96,8 +116,8 @@ def demo_t2v(prompt: str, mp4_folder: Path):
 def demo_tts(prompt: str, mp3_folder: Path):
     print(f'[-] demo_tts {prompt=}')
 
-    mp3_file = f'{mp3_folder}/{prompt.replace(" ", "_")}.mp3'
-    tts_file = f'{mp3_folder}/{prompt.replace(" ", "_")}.tts'
+    mp3_file = f'{mp3_folder}/{convert_string(prompt)}.mp3'
+    tts_file = f'{mp3_folder}/{convert_string(prompt)}.tts'
     curr_dir = os.getcwd()
     voice_dir = os.path.join(curr_dir, mp3_folder)
     os.makedirs(voice_dir, exist_ok=True)
@@ -113,11 +133,15 @@ def demo_tts(prompt: str, mp3_folder: Path):
 
 
 def merge_video_audio(
-    prompt: str, mp3_file: Path, mp4_file: Path, output_file: Path
+    prompt: str,
+    mp3_file: Path,
+    mp4_file: Path,
+    mp4_folder: Path,
+    output_file: Path,
 ):
     print(f'[-] merge_video_audio')
 
-    merged_file = 'merged.mp4'
+    merged_file = f'{mp4_folder}/merged_{convert_string(prompt)}.mp4'
     # command = ['ffmpeg -i videos/Spring_has_come.mp4 -i voices/Spring_has_come.mp3 -c:v copy -c:a mp3 merged.mp4']
 
     # merge video and audio
@@ -136,44 +160,56 @@ def merge_video_audio(
         '-vf',
         f'drawtext=text={prompt} :x=150:y=400:fontsize=24:fontcolor=white',
     ]
+    command += [f'{mp4_folder}/{output_file}']
+    run_command(command)
+
+
+def merge_story_videos(
+    story_file: Path, video_list_file: Path, mp4_folder: Path
+) -> None:
+    print(f'[+] merge_story_videos for {story_file}')
+
+    output_file = f'{mp4_folder}/{story_file.split("/")[-1].split(".")[0]}.mp4'
+
+    command = ['ffmpeg']
+    command += ['-f', 'concat']
+    command += ['-safe', '0']
+    command += [f'-i', video_list_file]
+    command += ['-c:v', 'copy']
+    command += ['-c:a', 'copy']
     command += [output_file]
     run_command(command)
 
 
-def merge_story_videos():
-    print(f'[+] merge_story_videos')
-
-
 def demo_t2v_tts(sentence, mp3_folder: Path, mp4_folder: Path):
     print(f'[+] demo_t2v_tts {sentence=}')
-    output_file = f'final.mp4'
+    output_file = f'final_{convert_string(sentence)}.mp4'
 
-    # mp3_file = demo_tts(sentence, mp3_folder)
-    # mp4_file = demo_t2v(sentence, mp4_folder)
-    # merge_video_audio(sentence, mp3_file, mp4_file, output_file)
+    mp3_file = demo_tts(sentence, mp3_folder)
+    mp4_file = demo_t2v(sentence, mp4_folder)
+    merge_video_audio(sentence, mp3_file, mp4_file, mp4_folder, output_file)
 
-    merge_video_audio(
-        sentence,
-        './voices/Spring_has_come.mp3',
-        './videos/Spring_has_come.mp4',
-        output_file,
-    )
+    return output_file
 
 
-txt_folder = './texts'
-mp3_folder = './voices'
-mp4_folder = './videos'
+if __name__ == '__main__':
+    story_file = 'demo/tadpoles_look_for_mom.txt'
 
-story = 'demo/tadpoles_look_for_mom.txt'
-sentences = read_and_splite(story, txt_folder)
+    clear_folders([txt_folder, mp3_folder, mp4_folder])
 
-for sentence in sentences:
-    demo_t2v_tts(sentence, mp3_folder, mp4_folder)
+    sentences = read_and_splite(story_file, txt_folder)
 
-    # for testing
-    sys.exit(0)
+    video_list_file = f'{mp4_folder}/list.txt'
+    for sentence in sentences:
+        video_merged = demo_t2v_tts(sentence, mp3_folder, mp4_folder)
+        line = f'file "{video_merged}"'
 
-# merge all small videos (with voice and subtitles)
-merge_story_videos()
+        command = f'echo {line} >> {video_list_file}'
+        print(f'{command=}')
+        os.system(f"{command}")
+
+    # merge all small videos (with voice and subtitles)
+    merge_story_videos(story_file, video_list_file, mp4_folder)
+
 
 # python demo/demo-t2v-tts.py
