@@ -14,7 +14,7 @@ mp4_folder = './videos'
 
 
 def convert_string(prompt: str) -> str:
-    return prompt.replace(' ', '_')
+    return prompt.replace(', ', '_').replace(' ', '_')
 
 
 def clear_folders(folders) -> None:
@@ -29,15 +29,15 @@ def clear_folders(folders) -> None:
 
 
 def run_command(command):
-    print(f'[*] run_command {command=} ')
+    print(f'[*] run_command: {" ".join(command)} ')
 
     try:
         result = subprocess.run(command, shell=False, timeout=6000)
-        print(f'demo_tts subprocess {result=}')
+        print(f'[v] demo_tts subprocess {result=}')
     except subprocess.CalledProcessError as e:
-        print('Command: {command}')
-        print('Exception return code: {e.returncode}')
-        print('Exception output: {e.output}')
+        print('[x] Command: {" ".join(command)}')
+        print('[x] Exception return code: {e.returncode}')
+        print('[x] Exception output: {e.output}')
 
 
 def read_and_splite(story_file, txt_folder: Path):
@@ -56,8 +56,6 @@ def read_and_splite(story_file, txt_folder: Path):
         # skip blank line
         if line == '':
             continue
-        # if not i == 12:
-        #    continue
 
         # print(f'[line {i}] {line}')
         lex = shlex.shlex(line, posix=True)
@@ -82,6 +80,7 @@ def read_and_splite(story_file, txt_folder: Path):
 
 
 def demo_t2v(prompt: str, mp4_folder: Path):
+    # prompt = "春天来了"
     print(f'[-] demo_t2v {prompt=}')
 
     mp4_file = f'{mp4_folder}/{convert_string(prompt)}.mp4'
@@ -89,11 +88,10 @@ def demo_t2v(prompt: str, mp4_folder: Path):
     voice_dir = os.path.join(curr_dir, mp4_folder)
     os.makedirs(voice_dir, exist_ok=True)
 
-    print(f'\n######', sys._getframe().f_code.co_name)
+    print(f'\n###### demo_t2v', sys._getframe().f_code.co_name)
 
     model = Model(device="cuda", dtype=torch.float16)
 
-    # prompt = "春天来了"
     params = {
         "t0": 44,
         "t1": 47,
@@ -129,12 +127,13 @@ def demo_tts(prompt: str, mp3_folder: Path):
     command += ['--write-subtitles', tts_file]
     run_command(command)
 
-    return mp3_file
+    return mp3_file, tts_file
 
 
 def merge_video_audio(
     prompt: str,
     mp3_file: Path,
+    tts_file: Path,
     mp4_file: Path,
     mp4_folder: Path,
     output_file: Path,
@@ -142,7 +141,6 @@ def merge_video_audio(
     print(f'[-] merge_video_audio')
 
     merged_file = f'{mp4_folder}/merged_{convert_string(prompt)}.mp4'
-    # command = ['ffmpeg -i videos/Spring_has_come.mp4 -i voices/Spring_has_come.mp3 -c:v copy -c:a mp3 merged.mp4']
 
     # merge video and audio
     command = ['ffmpeg']
@@ -156,10 +154,11 @@ def merge_video_audio(
     # add subtitles
     command = ['ffmpeg']
     command += ['-i', merged_file]
-    command += [
-        '-vf',
-        f'drawtext=text={prompt} :x=50:y=400:fontsize=24:fontcolor=white',
-    ]
+    # command += [
+    #    '-vf',
+    #    f'drawtext=text={prompt} :x=50:y=400:fontsize=24:fontcolor=white',
+    # ]
+    command += ['-filter_complex', f"subtitles={tts_file}"]
     command += [f'{mp4_folder}/{output_file}']
     run_command(command)
 
@@ -185,15 +184,18 @@ def demo_t2v_tts(sentence, mp3_folder: Path, mp4_folder: Path):
     print(f'[+] demo_t2v_tts {sentence=}')
     output_file = f'final_{convert_string(sentence)}.mp4'
 
-    mp3_file = demo_tts(sentence, mp3_folder)
+    mp3_file, tts_file = demo_tts(sentence, mp3_folder)
     mp4_file = demo_t2v(sentence, mp4_folder)
-    merge_video_audio(sentence, mp3_file, mp4_file, mp4_folder, output_file)
+    merge_video_audio(
+        sentence, mp3_file, tts_file, mp4_file, mp4_folder, output_file
+    )
 
     return output_file
 
 
 if __name__ == '__main__':
-    story_file = 'demo/tadpoles_look_for_mom.txt'
+    # story_file = 'demo/tadpoles_look_for_mom.txt'
+    story_file = 'demo/protect_yourself_from_covid19.txt'
 
     clear_folders([txt_folder, mp3_folder, mp4_folder])
 
@@ -201,6 +203,13 @@ if __name__ == '__main__':
 
     video_list_file = f'{mp4_folder}/list.txt'
     for sentence in sentences:
+        print(f'{sentence = }')
+        # start = input('Start to run? (y/n) ')
+        # if start == 'n':
+        #     sys.exit(0)
+        # elif start == '':
+        #     continue
+
         video_merged = demo_t2v_tts(sentence, mp3_folder, mp4_folder)
         line = f'file "{video_merged}"'
 
