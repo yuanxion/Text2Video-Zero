@@ -159,6 +159,7 @@ def merge_video_audio(
     #    f'drawtext=text={prompt} :x=50:y=400:fontsize=24:fontcolor=white',
     # ]
     command += ['-filter_complex', f"subtitles={tts_file}"]
+    command += ['-max_muxing_queue_size', '1024']
     command += [f'{mp4_folder}/{output_file}']
     run_command(command)
 
@@ -176,6 +177,7 @@ def merge_story_videos(
     command += [f'-i', video_list_file]
     command += ['-c:v', 'copy']
     command += ['-c:a', 'copy']
+    command += ['-max_muxing_queue_size', '1024']
     command += [output_file]
     run_command(command)
 
