@@ -38,3 +38,4 @@ tomesd
 
 # for tts
 edge-tts==6.1.7
+librosa==0.10.1

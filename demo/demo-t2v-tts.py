@@ -1,3 +1,5 @@
+import librosa
+import math
 import os
 import shlex
 import subprocess
@@ -33,7 +35,7 @@ def run_command(command):
 
     try:
         result = subprocess.run(command, shell=False, timeout=6000)
-        print(f'[v] demo_tts subprocess {result=}')
+        print(f'[v] subprocess {result = }')
     except subprocess.CalledProcessError as e:
         print('[x] Command: {" ".join(command)}')
         print('[x] Exception return code: {e.returncode}')
@@ -79,7 +81,7 @@ def read_and_splite(story_file, txt_folder: Path):
     return sentences
 
 
-def demo_t2v(prompt: str, mp4_folder: Path):
+def demo_t2v(prompt: str, duration: int, mp4_folder: Path):
     # prompt = "春天来了"
     print(f'[-] demo_t2v {prompt=}')
 
@@ -92,20 +94,20 @@ def demo_t2v(prompt: str, mp4_folder: Path):
 
     model = Model(device="cuda", dtype=torch.float16)
 
+    out_path, fps = mp4_file, 4
     params = {
         "t0": 44,
         "t1": 47,
         "motion_field_strength_x": 12,
         "motion_field_strength_y": 12,
-        "video_length": 8,
-        # "video_length": 80,
+        "video_length": math.ceil(duration * 30 / fps),
+        # "video_length": 80,'
     }
     # more options for low GPU memory usage
     # params.update({"chunk_size": 2})  # 8
     params.update({"chunk_size": 4})  # 8
     params.update({"merging_ratio": 1})  # 0
 
-    out_path, fps = mp4_file, 4
     model.process_text2video(prompt, fps=fps, path=out_path, **params)
 
     return mp4_file
@@ -187,7 +189,9 @@ def demo_t2v_tts(sentence, mp3_folder: Path, mp4_folder: Path):
     output_file = f'final_{convert_string(sentence)}.mp4'
 
     mp3_file, tts_file = demo_tts(sentence, mp3_folder)
-    mp4_file = demo_t2v(sentence, mp4_folder)
+    duration = librosa.get_duration(path=mp3_file)
+    print(f'{mp3_file = }: {duration = }')
+    mp4_file = demo_t2v(sentence, math.ceil(duration), mp4_folder)
     merge_video_audio(
         sentence, mp3_file, tts_file, mp4_file, mp4_folder, output_file
     )
