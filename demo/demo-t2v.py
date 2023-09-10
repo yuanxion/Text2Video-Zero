@@ -34,6 +34,7 @@ def demo_t2v():
     # more options for low GPU memory usage
     params.update({"chunk_size": 2})  # 8
     params.update({"merging_ratio": 1})  # 0
+    params.update({"num_inference_steps": 50}) # 50
 
     out_path, fps = f"./text2video_{prompt.replace(' ','_')}.mp4", 4
     model.process_text2video(prompt, fps=fps, path=out_path, **params)
@@ -140,9 +141,9 @@ def demo_t2v_instruct_pix2pix():
     )
 
 
-# demo_t2v()
+demo_t2v()
 # demo_t2v_with_pose()
 # demo_t2v_with_edge()
 # demo_t2v_with_edge_dreambooth()
 # demo_t2v_with_depth()
-demo_t2v_instruct_pix2pix()
+# demo_t2v_instruct_pix2pix()
