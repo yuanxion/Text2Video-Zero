@@ -1,8 +1,10 @@
 from enum import Enum
+from PIL import Image
 import gc
 import numpy as np
 import tomesd
 import torch
+import torchvision
 
 from diffusers import StableDiffusionInstructPix2PixPipeline, StableDiffusionControlNetPipeline, ControlNetModel, UNet2DConditionModel
 from diffusers.schedulers import EulerAncestralDiscreteScheduler, DDIMScheduler
@@ -493,4 +495,15 @@ class Model:
                                 split_to_chunks=True,
                                 chunk_size=chunk_size,
                                 )
+        print(f'--> process_text2video {fps = }')
+        print(f'--> process_text2video {type(result) = }')
+        print(f'--> process_text2video {result.shape = }')
+        self.dump_images(result, fps)
         return utils.create_video(result, fps, path=path, watermark=gradio_utils.logo_name_to_path(watermark))
+
+    def dump_images(self, result, fps):
+        print(f'dump_images {fps = } {result.shape = }')
+        for i,img in enumerate(result):
+            print(f'dump_images {img.shape = }')
+            frame = Image.fromarray( (img*255).astype(np.uint8) )
+            frame.save(f'dump_images{i}.png')

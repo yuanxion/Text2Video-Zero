@@ -167,12 +167,13 @@ class TextToVideoPipeline(StableDiffusionPipeline):
                 # latents = latents - alpha * grads / (torch.norm(grads) + 1e-10)
                 # call the callback, if provided
 
+                #print(f'{t0 = } {t1 = } {len(timesteps) = } {i = }')
                 if i < len(timesteps)-1 and timesteps[i+1] == t0:
                     x_t0_1 = latents.detach().clone()
-                    print(f"latent t0 found at i = {i}, t = {t}")
+                    #print(f"--> latent t0 found at i = {i}, t = {t}")
                 elif i < len(timesteps)-1 and timesteps[i+1] == t1:
                     x_t1_1 = latents.detach().clone()
-                    print(f"latent t1 found at i={i}, t = {t}")
+                    #print(f"--> latent t1 found at i={i}, t = {t}")
 
                 if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
                     progress_bar.update()
@@ -355,7 +356,7 @@ class TextToVideoPipeline(StableDiffusionPipeline):
         shape = (batch_size, num_channels_latents, 1, height //
                  self.vae_scale_factor, width // self.vae_scale_factor)
 
-        ddim_res = self.DDIM_backward(num_inference_steps=num_inference_steps, timesteps=timesteps, skip_t=1000, t0=t0, t1=t1, do_classifier_free_guidance=do_classifier_free_guidance,
+        ddim_res = self.DDIM_backward(num_inference_steps=num_inference_steps, timesteps=timesteps[:num_inference_steps], skip_t=1000, t0=t0, t1=t1, do_classifier_free_guidance=do_classifier_free_guidance,
                                       null_embs=null_embs, text_embeddings=text_embeddings, latents_local=xT, latents_dtype=dtype, guidance_scale=guidance_scale, guidance_stop_step=guidance_stop_step,
                                       callback=callback, callback_steps=callback_steps, extra_step_kwargs=extra_step_kwargs, num_warmup_steps=num_warmup_steps)
 

@@ -24,9 +24,11 @@ def demo_t2v():
     model = Model(device="cuda", dtype=torch.float16)
 
     prompt = "A horse galloping on a raining street"
+    #t0": 44,
+    #t1": 47,
     params = {
-        "t0": 44,
-        "t1": 47,
+        "t0": 40,
+        "t1": 45,
         "motion_field_strength_x": 12,
         "motion_field_strength_y": 12,
         "video_length": 8,
@@ -34,7 +36,7 @@ def demo_t2v():
     # more options for low GPU memory usage
     params.update({"chunk_size": 2})  # 8
     params.update({"merging_ratio": 1})  # 0
-    params.update({"num_inference_steps": 50}) # 50
+    params.update({"num_inference_steps": 20}) # 50
 
     out_path, fps = f"./text2video_{prompt.replace(' ','_')}.mp4", 4
     model.process_text2video(prompt, fps=fps, path=out_path, **params)
