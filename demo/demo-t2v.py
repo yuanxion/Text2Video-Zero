@@ -23,22 +23,32 @@ def demo_t2v():
     print(f'\n######', sys._getframe().f_code.co_name)
     model = Model(device="cuda", dtype=torch.float16)
 
-    prompt = "A horse galloping on a raining street"
+    #prompt = "A horse galloping on a raining street"
+    #prompt = "Wash your hands frequently"
+    #prompt = "Avoid touching your eyes, nose and mouth"
+    #prompt = "Cover your cough"
+
+    #prompt = "John is washing his hands by the sink"
+    prompt = "John is washing his hands"
+    #prompt = "really attractive anime girl skating, by makoto shinkai, cinematic lighting"
+    #prompt = "waterfall"
+
     #t0": 44,
     #t1": 47,
     params = {
         "t0": 40,
         "t1": 45,
-        "motion_field_strength_x": 12,
-        "motion_field_strength_y": 12,
-        "video_length": 8,
+        "motion_field_strength_x": 4,
+        "motion_field_strength_y": 4,
+        "video_length": 16, #8,
+        #"smooth_bg": True,
     }
     # more options for low GPU memory usage
-    params.update({"chunk_size": 2})  # 8
+    params.update({"chunk_size": 8})  # 8
     params.update({"merging_ratio": 1})  # 0
     params.update({"num_inference_steps": 20}) # 50
 
-    out_path, fps = f"./text2video_{prompt.replace(' ','_')}.mp4", 4
+    out_path, fps = f"./text2video_{prompt.replace(' ','_')}.mp4", 2 #4
     model.process_text2video(prompt, fps=fps, path=out_path, **params)
 
 

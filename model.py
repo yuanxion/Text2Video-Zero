@@ -479,7 +479,7 @@ class Model:
                                 height=resolution,
                                 width=resolution,
                                 num_inference_steps=num_inference_steps,
-                                guidance_scale=7.5,
+                                guidance_scale=23.0, #7.5,
                                 guidance_stop_step=1.0,
                                 t0=t0,
                                 t1=t1,

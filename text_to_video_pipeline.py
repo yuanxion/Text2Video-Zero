@@ -410,7 +410,8 @@ class TextToVideoPipeline(StableDiffusionPipeline):
             M_FG = torch.zeros((batch_size, video_length, h, w),
                                device=x0.device).to(x0.dtype)
             for batch_idx, x0_b in enumerate(x0):
-                z0_b = self.decode_latents(x0_b[None]).detach()
+                z0_b = self.decode_latents(x0_b[None]).detach().to(x0.device)
+                #print(f'{z0_b.device = }')
                 z0_b = rearrange(z0_b[0], "c f h w -> f h w c")
                 for frame_idx, z0_f in enumerate(z0_b):
                     z0_f = torch.round(

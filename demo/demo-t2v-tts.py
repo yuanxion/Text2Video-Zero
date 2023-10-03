@@ -1,6 +1,7 @@
 import librosa
 import math
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -51,34 +52,21 @@ def read_and_splite(story_file, txt_folder: Path):
             print(f'Read story file failed, exit...')
             sys.exit(0)
 
-    sentences = []
+    shots, voiceovers = [], []
+    ps = re.compile(r'[[](.*?)[]]', re.S)
+    pv = re.compile(r'["](.*?)["]', re.S)
     for i, line in enumerate(lines):
-        line = line.strip('\n')
+        #print(f'--> {line = }')
 
-        # skip blank line
-        if line == '':
-            continue
+        shot = re.findall(ps, line)[0]
+        shot = shot.strip('.')
+        shots.append(shot)
 
-        # print(f'[line {i}] {line}')
-        lex = shlex.shlex(line, posix=True)
-        lex.whitespace = '.'
-        lex.whitespace_split = True
-        lex.quotes = '"'
-        res = list(lex)
+        voiceover = re.findall(pv, line)[0]
+        voiceover = voiceover.strip('.')
+        voiceovers.append(voiceover)
 
-        for sentence in res:
-            # skip blank sentence
-            if sentence == '':
-                continue
-
-            # remove white-space
-            sentence = sentence.strip()
-            sentences.append(sentence)
-
-    # for j, sentence in enumerate(sentences):
-    #     print(f'  [sentence {j}] {sentence}')
-
-    return sentences
+    return shots, voiceovers
 
 
 def demo_t2v(prompt: str, duration: int, mp4_folder: Path):
@@ -91,40 +79,42 @@ def demo_t2v(prompt: str, duration: int, mp4_folder: Path):
     os.makedirs(voice_dir, exist_ok=True)
 
     print(f'\n###### demo_t2v', sys._getframe().f_code.co_name)
-
     model = Model(device="cuda", dtype=torch.float16)
 
-    out_path, fps = mp4_file, 4
+    out_path, fps = mp4_file, 1 #4
+    video_length = math.ceil(duration * 30 / fps)
+    print(f'{duration = } {video_length = }')
     params = {
-        "t0": 44,
-        "t1": 47,
-        "motion_field_strength_x": 12,
-        "motion_field_strength_y": 12,
-        "video_length": math.ceil(duration * 30 / fps),
-        # "video_length": 80,'
+        "t0": 40,
+        "t1": 45,
+        "motion_field_strength_x": 6,
+        "motion_field_strength_y": 6,
+        "video_length": video_length,
+        #"video_length": 8,
     }
     # more options for low GPU memory usage
     # params.update({"chunk_size": 2})  # 8
     params.update({"chunk_size": 4})  # 8
-    params.update({"merging_ratio": 1})  # 0
+    params.update({"merging_ratio": 0.4})  # 0
+    params.update({"num_inference_steps": 20})  # 50
 
     model.process_text2video(prompt, fps=fps, path=out_path, **params)
 
     return mp4_file
 
 
-def demo_tts(prompt: str, mp3_folder: Path):
-    print(f'[-] demo_tts {prompt=}')
+def demo_tts(voiceover: str, mp3_folder: Path):
+    print(f'[-] demo_tts {voiceover=}')
 
-    mp3_file = f'{mp3_folder}/{convert_string(prompt)}.mp3'
-    tts_file = f'{mp3_folder}/{convert_string(prompt)}.tts'
+    mp3_file = f'{mp3_folder}/{convert_string(voiceover)}.mp3'
+    tts_file = f'{mp3_folder}/{convert_string(voiceover)}.tts'
     curr_dir = os.getcwd()
     voice_dir = os.path.join(curr_dir, mp3_folder)
     os.makedirs(voice_dir, exist_ok=True)
 
     command = ['edge-tts']
     command += ['--voice', 'zh-CN-XiaoyiNeural']
-    command += ['--text', prompt]
+    command += ['--text', voiceover]
     command += ['--write-media', mp3_file]
     command += ['--write-subtitles', tts_file]
     run_command(command)
@@ -133,7 +123,7 @@ def demo_tts(prompt: str, mp3_folder: Path):
 
 
 def merge_video_audio(
-    prompt: str,
+    shot: str,
     mp3_file: Path,
     tts_file: Path,
     mp4_file: Path,
@@ -142,7 +132,7 @@ def merge_video_audio(
 ):
     print(f'[-] merge_video_audio')
 
-    merged_file = f'{mp4_folder}/merged_{convert_string(prompt)}.mp4'
+    merged_file = f'{mp4_folder}/merged_{convert_string(shot)}.mp4'
 
     # merge video and audio
     command = ['ffmpeg']
@@ -158,7 +148,7 @@ def merge_video_audio(
     command += ['-i', merged_file]
     # command += [
     #    '-vf',
-    #    f'drawtext=text={prompt} :x=50:y=400:fontsize=24:fontcolor=white',
+    #    f'drawtext=text={shot} :x=50:y=400:fontsize=24:fontcolor=white',
     # ]
     command += ['-filter_complex', f"subtitles={tts_file}"]
     command += ['-max_muxing_queue_size', '1024']
@@ -184,16 +174,16 @@ def merge_story_videos(
     run_command(command)
 
 
-def demo_t2v_tts(sentence, mp3_folder: Path, mp4_folder: Path):
-    print(f'[+] demo_t2v_tts {sentence=}')
-    output_file = f'final_{convert_string(sentence)}.mp4'
+def demo_t2v_tts(shot: str, voiceover: str, mp3_folder: Path, mp4_folder: Path):
+    print(f'[+] demo_t2v_tts {shot=}')
+    output_file = f'final_{convert_string(shot)}.mp4'
 
-    mp3_file, tts_file = demo_tts(sentence, mp3_folder)
+    mp3_file, tts_file = demo_tts(voiceover, mp3_folder)
     duration = librosa.get_duration(path=mp3_file)
     print(f'{mp3_file = }: {duration = }')
-    mp4_file = demo_t2v(sentence, math.ceil(duration), mp4_folder)
+    mp4_file = demo_t2v(shot, math.ceil(duration), mp4_folder)
     merge_video_audio(
-        sentence, mp3_file, tts_file, mp4_file, mp4_folder, output_file
+        shot, mp3_file, tts_file, mp4_file, mp4_folder, output_file
     )
 
     return output_file
@@ -201,22 +191,24 @@ def demo_t2v_tts(sentence, mp3_folder: Path, mp4_folder: Path):
 
 if __name__ == '__main__':
     # story_file = 'demo/tadpoles_look_for_mom.txt'
-    story_file = 'demo/protect_yourself_from_covid19.txt'
+    #story_file = 'demo/protect_yourself_from_covid19.txt'
+    #story_file = 'demo/tell_me_a_story.txt'
+    story_file = 'demo/chatgpt4_story.txt'
 
     clear_folders([txt_folder, mp3_folder, mp4_folder])
-
-    sentences = read_and_splite(story_file, txt_folder)
+    shots, voiceovers = read_and_splite(story_file, txt_folder)
 
     video_list_file = f'{mp4_folder}/list.txt'
-    for sentence in sentences:
-        print(f'{sentence = }')
+    for shot, voiceover in zip(shots, voiceovers):
+        print(f'{shot = } {voiceover = }')
+
         # start = input('Start to run? (y/n) ')
         # if start == 'n':
         #     sys.exit(0)
         # elif start == '':
         #     continue
 
-        video_merged = demo_t2v_tts(sentence, mp3_folder, mp4_folder)
+        video_merged = demo_t2v_tts(shot, voiceover, mp3_folder, mp4_folder)
         line = f'file "{video_merged}"'
 
         command = f'echo {line} >> {video_list_file}'
